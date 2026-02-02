@@ -1,7 +1,9 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+const path = require('path');
+
+module.exports = {
     content: [
-        './src/**/*.{vue,js,ts,jsx,tsx}',
+        path.join(__dirname, 'src/**/*.{vue,js,ts,jsx,tsx}'),
     ],
     theme: {
         extend: {

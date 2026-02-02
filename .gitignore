@@ -11,6 +11,7 @@ vendor/
 # Build outputs
 blocks/build/
 admin/dist/
+package-lock.json
 
 # OS files
 .DS_Store

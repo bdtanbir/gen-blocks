@@ -206,6 +206,11 @@ function genblocks_enqueue_admin_assets($hook) {
     $asset_file = GENBLOCKS_PLUGIN_DIR . 'admin/dist/assets/index.php';
     $js_file = GENBLOCKS_PLUGIN_DIR . 'admin/dist/assets/index.js';
     $css_file = GENBLOCKS_PLUGIN_DIR . 'admin/dist/assets/index.css';
+    $css_url = GENBLOCKS_PLUGIN_URL . 'admin/dist/assets/index.css';
+    if (!file_exists($css_file)) {
+        $css_file = GENBLOCKS_PLUGIN_DIR . 'admin/dist/assets/main.css';
+        $css_url = GENBLOCKS_PLUGIN_URL . 'admin/dist/assets/main.css';
+    }
 
     $version = GENBLOCKS_VERSION;
     $dependencies = [];
@@ -236,7 +241,7 @@ function genblocks_enqueue_admin_assets($hook) {
     if (file_exists($css_file)) {
         wp_enqueue_style(
             'genblocks-admin-style',
-            GENBLOCKS_PLUGIN_URL . 'admin/dist/assets/index.css',
+            $css_url,
             ['wp-components'],
             $version
         );
