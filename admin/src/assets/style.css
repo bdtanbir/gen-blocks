@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* GenBlocks Admin Styles */
+#genblocks-admin-app {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Override WordPress admin styles */
+#genblocks-admin a {
+    box-shadow: none;
+}
+
+#genblocks-admin a:focus {
+    box-shadow: none;
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+/* Card styles */
+.gb-card {
+    @apply gb-bg-white gb-rounded-lg gb-shadow gb-p-6;
+}
+
+/* Button styles */
+.gb-btn {
+    @apply gb-px-4 gb-py-2 gb-rounded gb-font-medium gb-transition-colors;
+}
+
+.gb-btn-primary {
+    @apply gb-bg-wp-primary gb-text-white hover:gb-bg-wp-primary-dark;
+}
+
+.gb-btn-secondary {
+    @apply gb-bg-gray-200 gb-text-gray-700 hover:gb-bg-gray-300;
+}
+
+/* Form styles */
+.gb-input {
+    @apply gb-w-full gb-px-3 gb-py-2 gb-border gb-border-gray-300 gb-rounded focus:gb-outline-none focus:gb-ring-2 focus:gb-ring-wp-primary focus:gb-border-transparent;
+}
+
+.gb-label {
+    @apply gb-block gb-text-sm gb-font-medium gb-text-gray-700 gb-mb-1;
+}

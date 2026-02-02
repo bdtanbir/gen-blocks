@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenBlocks Admin - Development</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dashicons/0.9.0/css/dashicons.min.css">
+    <script>
+        // Mock WordPress data for development
+        window.genBlocksAdmin = {
+            apiUrl: 'http://localhost/wp-json/genblocks/v1/',
+            nonce: 'dev-nonce',
+            pluginUrl: '',
+            version: '1.0.0'
+        };
+    </script>
+</head>
+<body>
+    <div id="genblocks-admin-app"></div>
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
