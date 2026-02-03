@@ -57,7 +57,7 @@ class AI_Engine {
         if (!$this->settings->has_api_key()) {
             return new \WP_Error(
                 'no_api_key',
-                __('API key is not configured. Please add your OpenAI API key in settings.', 'get-blocks'),
+                __('API key is not configured. Please add your OpenAI API key in settings.', 'gen-blocks'),
                 ['status' => 400]
             );
         }
@@ -239,7 +239,7 @@ PROMPT;
         if (is_wp_error($response)) {
             return new \WP_Error(
                 'api_request_failed',
-                __('Failed to connect to OpenAI API: ', 'get-blocks') . $response->get_error_message(),
+                __('Failed to connect to OpenAI API: ', 'gen-blocks') . $response->get_error_message(),
                 ['status' => 500]
             );
         }
@@ -251,7 +251,7 @@ PROMPT;
         if ($status_code !== 200) {
             $error_message = isset($data['error']['message'])
                 ? $data['error']['message']
-                : __('Unknown API error', 'get-blocks');
+                : __('Unknown API error', 'gen-blocks');
 
             return new \WP_Error(
                 'api_error',
@@ -263,7 +263,7 @@ PROMPT;
         if (!isset($data['choices'][0]['message']['content'])) {
             return new \WP_Error(
                 'invalid_response',
-                __('Invalid response from OpenAI API', 'get-blocks'),
+                __('Invalid response from OpenAI API', 'gen-blocks'),
                 ['status' => 500]
             );
         }
@@ -298,7 +298,7 @@ PROMPT;
         if (false === $first_brace || false === $last_brace) {
             return new \WP_Error(
                 'invalid_json',
-                __('AI response does not contain valid JSON', 'get-blocks'),
+                __('AI response does not contain valid JSON', 'gen-blocks'),
                 ['status' => 500, 'raw_response' => $content]
             );
         }
@@ -309,7 +309,7 @@ PROMPT;
         if (json_last_error() !== JSON_ERROR_NONE) {
             return new \WP_Error(
                 'json_parse_error',
-                __('Failed to parse AI response as JSON: ', 'get-blocks') . json_last_error_msg(),
+                __('Failed to parse AI response as JSON: ', 'gen-blocks') . json_last_error_msg(),
                 ['status' => 500, 'raw_response' => $content]
             );
         }
@@ -318,7 +318,7 @@ PROMPT;
         if (!isset($block_data['blockName'])) {
             return new \WP_Error(
                 'invalid_block',
-                __('AI response missing required blockName field', 'get-blocks'),
+                __('AI response missing required blockName field', 'gen-blocks'),
                 ['status' => 500]
             );
         }
@@ -404,7 +404,7 @@ PROMPT;
         if (!$this->settings->has_api_key()) {
             return new \WP_Error(
                 'no_api_key',
-                __('API key is not configured', 'get-blocks'),
+                __('API key is not configured', 'gen-blocks'),
                 ['status' => 400]
             );
         }
@@ -424,7 +424,7 @@ PROMPT;
         if (is_wp_error($response)) {
             return new \WP_Error(
                 'connection_failed',
-                __('Failed to connect to OpenAI API: ', 'get-blocks') . $response->get_error_message(),
+                __('Failed to connect to OpenAI API: ', 'gen-blocks') . $response->get_error_message(),
                 ['status' => 500]
             );
         }
@@ -434,7 +434,7 @@ PROMPT;
         if ($status_code === 200) {
             return [
                 'success' => true,
-                'message' => __('Successfully connected to OpenAI API', 'get-blocks'),
+                'message' => __('Successfully connected to OpenAI API', 'gen-blocks'),
             ];
         }
 
@@ -442,7 +442,7 @@ PROMPT;
         $data = json_decode($body, true);
         $error_message = isset($data['error']['message'])
             ? $data['error']['message']
-            : __('Invalid API key or connection error', 'get-blocks');
+            : __('Invalid API key or connection error', 'gen-blocks');
 
         return new \WP_Error(
             'api_error',

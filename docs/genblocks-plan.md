@@ -89,9 +89,9 @@ User can: Edit, customize, or regenerate
 
 ### Plugin File Structure
 ```
-get-blocks/
+gen-blocks/
 │
-├── get-blocks.php          # Main plugin file
+├── gen-blocks.php          # Main plugin file
 ├── composer.json                     # PHP dependencies
 ├── package.json                      # Node dependencies
 ├── webpack.config.js                 # Build configuration

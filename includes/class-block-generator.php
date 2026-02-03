@@ -97,13 +97,13 @@ class Block_Generator {
     public function validate_block($block) {
         // Check required fields
         if (!isset($block['blockName'])) {
-            throw new \Exception(__('Block is missing required blockName field', 'get-blocks'));
+            throw new \Exception(__('Block is missing required blockName field', 'gen-blocks'));
         }
 
         // Validate block name format
         $block_name = $block['blockName'];
         if (!preg_match('/^[a-z0-9-]+\/[a-z0-9-]+$/', $block_name)) {
-            throw new \Exception(__('Invalid block name format', 'get-blocks'));
+            throw new \Exception(__('Invalid block name format', 'gen-blocks'));
         }
 
         // Ensure block type is allowed

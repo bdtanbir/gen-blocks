@@ -253,7 +253,7 @@ class REST_API {
         if (!$this->check_rate_limit($user_id)) {
             return new \WP_Error(
                 'rate_limit_exceeded',
-                __('Daily rate limit exceeded. Please try again tomorrow or upgrade your plan.', 'get-blocks'),
+                __('Daily rate limit exceeded. Please try again tomorrow or upgrade your plan.', 'gen-blocks'),
                 ['status' => 429]
             );
         }
@@ -328,7 +328,7 @@ class REST_API {
         return rest_ensure_response([
             'success'  => true,
             'settings' => $this->settings->get_public(),
-            'message'  => __('Settings saved successfully', 'get-blocks'),
+            'message'  => __('Settings saved successfully', 'gen-blocks'),
         ]);
     }
 
@@ -357,7 +357,7 @@ class REST_API {
 
         return rest_ensure_response([
             'success' => true,
-            'message' => __('Cache cleared successfully', 'get-blocks'),
+            'message' => __('Cache cleared successfully', 'gen-blocks'),
         ]);
     }
 
@@ -424,32 +424,32 @@ class REST_API {
         $templates = [
             [
                 'id'          => 'cta-simple',
-                'name'        => __('Simple CTA', 'get-blocks'),
-                'description' => __('A centered call-to-action with heading, text, and button', 'get-blocks'),
+                'name'        => __('Simple CTA', 'gen-blocks'),
+                'description' => __('A centered call-to-action with heading, text, and button', 'gen-blocks'),
                 'category'    => 'call-to-action',
                 'prompt'      => 'Create a CTA section with a title, description, and button',
                 'preview'     => '',
             ],
             [
                 'id'          => 'hero-centered',
-                'name'        => __('Centered Hero', 'get-blocks'),
-                'description' => __('A hero section with large heading, subtitle, and two buttons', 'get-blocks'),
+                'name'        => __('Centered Hero', 'gen-blocks'),
+                'description' => __('A hero section with large heading, subtitle, and two buttons', 'gen-blocks'),
                 'category'    => 'hero',
                 'prompt'      => 'Create a hero section with large heading, subtitle, and two buttons',
                 'preview'     => '',
             ],
             [
                 'id'          => 'features-3col',
-                'name'        => __('3-Column Features', 'get-blocks'),
-                'description' => __('A three-column feature section with icons', 'get-blocks'),
+                'name'        => __('3-Column Features', 'gen-blocks'),
+                'description' => __('A three-column feature section with icons', 'gen-blocks'),
                 'category'    => 'features',
                 'prompt'      => 'Create a 3-column feature section with headings and descriptions',
                 'preview'     => '',
             ],
             [
                 'id'          => 'testimonial',
-                'name'        => __('Testimonial', 'get-blocks'),
-                'description' => __('A testimonial block with quote and attribution', 'get-blocks'),
+                'name'        => __('Testimonial', 'gen-blocks'),
+                'description' => __('A testimonial block with quote and attribution', 'gen-blocks'),
                 'category'    => 'social-proof',
                 'prompt'      => 'Create a testimonial block with a quote, author name, and role',
                 'preview'     => '',

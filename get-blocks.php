@@ -7,7 +7,7 @@
  * Author URI: https://github.com/bdtanbir
  * Plugin URI: https://github.com/bdtanbir/genblocks
  * License: GPLv2 or later
- * Text Domain: get-blocks
+ * Text Domain: gen-blocks
  * Domain Path: /languages
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -48,7 +48,7 @@ function genblocks_activate() {
     if (version_compare(PHP_VERSION, '7.4', '<')) {
         deactivate_plugins(GENBLOCKS_PLUGIN_BASENAME);
         wp_die(
-            esc_html__('GenBlocks requires PHP 7.4 or higher.', 'get-blocks'),
+            esc_html__('GenBlocks requires PHP 7.4 or higher.', 'gen-blocks'),
             'Plugin Activation Error',
             ['back_link' => true]
         );
@@ -58,7 +58,7 @@ function genblocks_activate() {
     if (version_compare(get_bloginfo('version'), '6.0', '<')) {
         deactivate_plugins(GENBLOCKS_PLUGIN_BASENAME);
         wp_die(
-            esc_html__('GenBlocks requires WordPress 6.0 or higher.', 'get-blocks'),
+            esc_html__('GenBlocks requires WordPress 6.0 or higher.', 'gen-blocks'),
             'Plugin Activation Error',
             ['back_link' => true]
         );
@@ -126,7 +126,7 @@ register_deactivation_hook(__FILE__, 'genblocks_deactivate');
  * Load text domain for translations
  */
 function genblocks_load_textdomain() {
-    load_plugin_textdomain('get-blocks', false, dirname(GENBLOCKS_PLUGIN_BASENAME) . '/languages');
+    load_plugin_textdomain('gen-blocks', false, dirname(GENBLOCKS_PLUGIN_BASENAME) . '/languages');
 }
 add_action('plugins_loaded', 'genblocks_load_textdomain');
 
@@ -257,8 +257,8 @@ add_action('admin_enqueue_scripts', 'genblocks_enqueue_admin_assets');
  */
 function genblocks_admin_menu() {
     add_menu_page(
-        __('GenBlocks', 'get-blocks'),
-        __('GenBlocks', 'get-blocks'),
+        __('GenBlocks', 'gen-blocks'),
+        __('GenBlocks', 'gen-blocks'),
         'manage_options',
         'genblocks',
         'genblocks_render_admin_page',
@@ -283,7 +283,7 @@ function genblocks_register_block_category($categories) {
         [
             [
                 'slug' => 'genblocks',
-                'title' => __('GenBlocks - AI Generated', 'get-blocks'),
+                'title' => __('GenBlocks - AI Generated', 'gen-blocks'),
                 'icon' => 'lightbulb',
             ],
         ],
@@ -296,7 +296,7 @@ add_filter('block_categories_all', 'genblocks_register_block_category', 10, 1);
  * Add plugin action links
  */
 function genblocks_action_links($links) {
-    $settings_link = '<a href="' . admin_url('admin.php?page=genblocks') . '">' . __('Settings', 'get-blocks') . '</a>';
+    $settings_link = '<a href="' . admin_url('admin.php?page=genblocks') . '">' . __('Settings', 'gen-blocks') . '</a>';
     array_unshift($links, $settings_link);
     return $links;
 }
