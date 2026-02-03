@@ -57,6 +57,27 @@ class Plugin {
     private $block_generator = null;
 
     /**
+     * Prompt Templates instance
+     *
+     * @var Prompt_Templates|null
+     */
+    private $prompt_templates = null;
+
+    /**
+     * Response Parser instance
+     *
+     * @var Response_Parser|null
+     */
+    private $response_parser = null;
+
+    /**
+     * Template Library instance
+     *
+     * @var Template_Library|null
+     */
+    private $template_library = null;
+
+    /**
      * Get the singleton instance
      *
      * @return Plugin
@@ -85,6 +106,9 @@ class Plugin {
 
         require_once $includes_dir . 'class-settings.php';
         require_once $includes_dir . 'class-encryption.php';
+        require_once $includes_dir . 'class-prompt-templates.php';
+        require_once $includes_dir . 'class-response-parser.php';
+        require_once $includes_dir . 'class-template-library.php';
         require_once $includes_dir . 'class-ai-engine.php';
         require_once $includes_dir . 'class-block-generator.php';
         require_once $includes_dir . 'class-rest-api.php';
@@ -97,9 +121,18 @@ class Plugin {
     private function init_components() {
         $this->settings = new Settings();
         $this->usage_tracker = new Usage_Tracker();
-        $this->ai_engine = new AI_Engine($this->settings);
+        $this->prompt_templates = new Prompt_Templates();
+        $this->response_parser = new Response_Parser();
+        $this->template_library = new Template_Library();
+        $this->ai_engine = new AI_Engine($this->settings, $this->prompt_templates, $this->response_parser);
         $this->block_generator = new Block_Generator();
-        $this->rest_api = new REST_API($this->ai_engine, $this->block_generator, $this->settings, $this->usage_tracker);
+        $this->rest_api = new REST_API(
+            $this->ai_engine,
+            $this->block_generator,
+            $this->settings,
+            $this->usage_tracker,
+            $this->template_library
+        );
     }
 
     /**
@@ -143,5 +176,32 @@ class Plugin {
      */
     public function get_block_generator() {
         return $this->block_generator;
+    }
+
+    /**
+     * Get Prompt Templates instance
+     *
+     * @return Prompt_Templates
+     */
+    public function get_prompt_templates() {
+        return $this->prompt_templates;
+    }
+
+    /**
+     * Get Response Parser instance
+     *
+     * @return Response_Parser
+     */
+    public function get_response_parser() {
+        return $this->response_parser;
+    }
+
+    /**
+     * Get Template Library instance
+     *
+     * @return Template_Library
+     */
+    public function get_template_library() {
+        return $this->template_library;
     }
 }

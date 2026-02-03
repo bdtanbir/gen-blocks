@@ -22,6 +22,20 @@ class AI_Engine {
     private $settings;
 
     /**
+     * Prompt Templates instance
+     *
+     * @var Prompt_Templates
+     */
+    private $prompt_templates;
+
+    /**
+     * Response Parser instance
+     *
+     * @var Response_Parser
+     */
+    private $response_parser;
+
+    /**
      * OpenAI API endpoint
      *
      * @var string
@@ -29,20 +43,16 @@ class AI_Engine {
     private $openai_endpoint = 'https://api.openai.com/v1/chat/completions';
 
     /**
-     * System prompt for block generation
-     *
-     * @var string
-     */
-    private $system_prompt = '';
-
-    /**
      * Constructor
      *
-     * @param Settings $settings Settings instance.
+     * @param Settings         $settings         Settings instance.
+     * @param Prompt_Templates $prompt_templates Prompt Templates instance (optional).
+     * @param Response_Parser  $response_parser  Response Parser instance (optional).
      */
-    public function __construct(Settings $settings) {
+    public function __construct(Settings $settings, Prompt_Templates $prompt_templates = null, Response_Parser $response_parser = null) {
         $this->settings = $settings;
-        $this->system_prompt = $this->get_system_prompt();
+        $this->prompt_templates = $prompt_templates ?: new Prompt_Templates();
+        $this->response_parser = $response_parser ?: new Response_Parser();
     }
 
     /**
@@ -57,9 +67,15 @@ class AI_Engine {
         if (!$this->settings->has_api_key()) {
             return new \WP_Error(
                 'no_api_key',
-                __('API key is not configured. Please add your OpenAI API key in settings.', 'gen-blocks'),
+                __('API key is not configured. Please add your OpenAI API key in settings.', 'get-blocks'),
                 ['status' => 400]
             );
+        }
+
+        // Validate prompt
+        $validation = $this->prompt_templates->validate_prompt($prompt);
+        if (is_wp_error($validation)) {
+            return $validation;
         }
 
         // Check cache first
@@ -70,8 +86,9 @@ class AI_Engine {
             }
         }
 
-        // Build the full prompt
-        $full_prompt = $this->build_prompt($prompt, $context);
+        // Enhance and build the full prompt
+        $enhanced_prompt = $this->prompt_templates->enhance_prompt($prompt);
+        $full_prompt = $this->prompt_templates->build_user_prompt($enhanced_prompt, $context);
 
         // Call AI API
         $response = $this->call_openai($full_prompt);
@@ -80,12 +97,20 @@ class AI_Engine {
             return $response;
         }
 
-        // Parse the response
-        $block_data = $this->parse_response($response);
+        // Parse the response using dedicated parser
+        $block_data = $this->response_parser->parse($response['content']);
 
         if (is_wp_error($block_data)) {
             return $block_data;
         }
+
+        // Add token usage info
+        $block_data['_meta'] = [
+            'tokens_used'       => $response['tokens_used'],
+            'prompt_tokens'     => $response['prompt_tokens'],
+            'completion_tokens' => $response['completion_tokens'],
+            'model'             => $response['model'],
+        ];
 
         // Cache the result
         if ($this->settings->get('cache_enabled')) {
@@ -96,104 +121,21 @@ class AI_Engine {
     }
 
     /**
-     * Get system prompt for AI
+     * Get prompt templates instance
      *
-     * @return string
+     * @return Prompt_Templates
      */
-    private function get_system_prompt() {
-        $prompt = <<<'PROMPT'
-You are an expert WordPress Gutenberg block generator. Your task is to convert natural language descriptions into valid Gutenberg block JSON.
-
-RULES:
-1. Always return ONLY valid JSON, no markdown code blocks, no explanations, no additional text
-2. Use standard WordPress core blocks when possible
-3. Include proper attributes for styling and content
-4. Nest blocks logically for complex layouts
-5. Generate accessible, semantic HTML
-6. Include appropriate CSS classes
-
-AVAILABLE CORE BLOCKS:
-- core/group (container with inner blocks)
-- core/heading (h1-h6 headings, use "content" for text, "level" for heading level)
-- core/paragraph (text content, use "content" for text)
-- core/button (use inside core/buttons)
-- core/buttons (container for button blocks)
-- core/image (images)
-- core/columns (multi-column layouts)
-- core/column (single column, use inside core/columns)
-- core/spacer (vertical spacing, use "height" attribute)
-- core/separator (horizontal line)
-- core/list (unordered/ordered lists)
-- core/quote (blockquotes)
-- core/cover (background image with overlay)
-
-CUSTOM BLOCKS (use for specific patterns):
-- genblocks/cta (call-to-action section)
-- genblocks/hero (hero section)
-
-OUTPUT FORMAT (return ONLY this JSON structure):
-{
-  "blockName": "core/group",
-  "attrs": {
-    "className": "custom-class",
-    "align": "wide",
-    "style": {
-      "spacing": {
-        "padding": {
-          "top": "40px",
-          "bottom": "40px"
-        }
-      }
-    }
-  },
-  "innerBlocks": []
-}
-
-IMPORTANT ATTRIBUTE NOTES:
-- For headings: use "content" (string) and "level" (number 1-6)
-- For paragraphs: use "content" (string)
-- For buttons: wrap in core/buttons, use "text" and "url" attributes
-- For columns: use "core/columns" with "core/column" innerBlocks
-- For alignment: use "align" attribute with values: "left", "center", "right", "wide", "full"
-- For colors: use "backgroundColor", "textColor" or "style.color.background", "style.color.text"
-PROMPT;
-
-        return apply_filters('genblocks_system_prompt', $prompt);
+    public function get_prompt_templates() {
+        return $this->prompt_templates;
     }
 
     /**
-     * Build the full prompt with context
+     * Get response parser instance
      *
-     * @param string $user_input User's prompt.
-     * @param array  $context    Additional context.
-     * @return string
+     * @return Response_Parser
      */
-    private function build_prompt($user_input, $context = []) {
-        $context_info = '';
-
-        if (!empty($context)) {
-            $context_parts = [];
-
-            if (isset($context['existing_blocks'])) {
-                $context_parts[] = 'Existing blocks on page: ' . implode(', ', $context['existing_blocks']);
-            }
-
-            if (isset($context['theme_colors'])) {
-                $context_parts[] = 'Theme colors: ' . wp_json_encode($context['theme_colors']);
-            }
-
-            if (isset($context['page_type'])) {
-                $context_parts[] = 'Page type: ' . $context['page_type'];
-            }
-
-            if (!empty($context_parts)) {
-                $context_info = "\n\nCURRENT CONTEXT:\n" . implode("\n", $context_parts);
-            }
-        }
-
-        $full_prompt = $user_input . $context_info . "\n\nGenerate the Gutenberg block JSON now:";
-
-        return apply_filters('genblocks_user_prompt', $full_prompt, $user_input, $context);
+    public function get_response_parser() {
+        return $this->response_parser;
     }
 
     /**
@@ -213,7 +155,7 @@ PROMPT;
             'messages'    => [
                 [
                     'role'    => 'system',
-                    'content' => $this->system_prompt,
+                    'content' => $this->prompt_templates->get_system_prompt(),
                 ],
                 [
                     'role'    => 'user',
@@ -275,63 +217,6 @@ PROMPT;
             'completion_tokens' => $data['usage']['completion_tokens'] ?? 0,
             'model'        => $data['model'] ?? $model,
         ];
-    }
-
-    /**
-     * Parse AI response into block data
-     *
-     * @param array $response AI response data.
-     * @return array|WP_Error Parsed block data or error.
-     */
-    private function parse_response($response) {
-        $content = $response['content'];
-
-        // Clean the response - remove markdown code blocks if present
-        $content = preg_replace('/^```(?:json)?\s*/m', '', $content);
-        $content = preg_replace('/\s*```$/m', '', $content);
-        $content = trim($content);
-
-        // Find JSON object
-        $first_brace = strpos($content, '{');
-        $last_brace = strrpos($content, '}');
-
-        if (false === $first_brace || false === $last_brace) {
-            return new \WP_Error(
-                'invalid_json',
-                __('AI response does not contain valid JSON', 'gen-blocks'),
-                ['status' => 500, 'raw_response' => $content]
-            );
-        }
-
-        $json_string = substr($content, $first_brace, $last_brace - $first_brace + 1);
-        $block_data = json_decode($json_string, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return new \WP_Error(
-                'json_parse_error',
-                __('Failed to parse AI response as JSON: ', 'gen-blocks') . json_last_error_msg(),
-                ['status' => 500, 'raw_response' => $content]
-            );
-        }
-
-        // Validate block structure
-        if (!isset($block_data['blockName'])) {
-            return new \WP_Error(
-                'invalid_block',
-                __('AI response missing required blockName field', 'gen-blocks'),
-                ['status' => 500]
-            );
-        }
-
-        // Add token usage info
-        $block_data['_meta'] = [
-            'tokens_used'       => $response['tokens_used'],
-            'prompt_tokens'     => $response['prompt_tokens'],
-            'completion_tokens' => $response['completion_tokens'],
-            'model'             => $response['model'],
-        ];
-
-        return $block_data;
     }
 
     /**

@@ -50,18 +50,27 @@ class REST_API {
     private $usage_tracker;
 
     /**
+     * Template Library instance
+     *
+     * @var Template_Library
+     */
+    private $template_library;
+
+    /**
      * Constructor
      *
-     * @param AI_Engine       $ai_engine       AI Engine instance.
-     * @param Block_Generator $block_generator Block Generator instance.
-     * @param Settings        $settings        Settings instance.
-     * @param Usage_Tracker   $usage_tracker   Usage Tracker instance.
+     * @param AI_Engine        $ai_engine        AI Engine instance.
+     * @param Block_Generator  $block_generator  Block Generator instance.
+     * @param Settings         $settings         Settings instance.
+     * @param Usage_Tracker    $usage_tracker    Usage Tracker instance.
+     * @param Template_Library $template_library Template Library instance.
      */
-    public function __construct(AI_Engine $ai_engine, Block_Generator $block_generator, Settings $settings, Usage_Tracker $usage_tracker) {
+    public function __construct(AI_Engine $ai_engine, Block_Generator $block_generator, Settings $settings, Usage_Tracker $usage_tracker, Template_Library $template_library = null) {
         $this->ai_engine = $ai_engine;
         $this->block_generator = $block_generator;
         $this->settings = $settings;
         $this->usage_tracker = $usage_tracker;
+        $this->template_library = $template_library ?: new Template_Library();
     }
 
     /**
@@ -215,6 +224,62 @@ class REST_API {
             [
                 'methods'             => 'GET',
                 'callback'            => [$this, 'get_templates'],
+                'permission_callback' => [$this, 'check_edit_permission'],
+                'args'                => [
+                    'category' => [
+                        'required' => false,
+                        'type'     => 'string',
+                    ],
+                ],
+            ]
+        );
+
+        // Get single template
+        register_rest_route(
+            $this->namespace,
+            '/templates/(?P<id>[a-z0-9-]+)',
+            [
+                'methods'             => 'GET',
+                'callback'            => [$this, 'get_template'],
+                'permission_callback' => [$this, 'check_edit_permission'],
+                'args'                => [
+                    'id' => [
+                        'required' => true,
+                        'type'     => 'string',
+                    ],
+                ],
+            ]
+        );
+
+        // Apply template
+        register_rest_route(
+            $this->namespace,
+            '/templates/(?P<id>[a-z0-9-]+)/apply',
+            [
+                'methods'             => 'POST',
+                'callback'            => [$this, 'apply_template'],
+                'permission_callback' => [$this, 'check_edit_permission'],
+                'args'                => [
+                    'id'        => [
+                        'required' => true,
+                        'type'     => 'string',
+                    ],
+                    'variables' => [
+                        'required' => false,
+                        'type'     => 'object',
+                        'default'  => [],
+                    ],
+                ],
+            ]
+        );
+
+        // Get example prompts
+        register_rest_route(
+            $this->namespace,
+            '/prompts/examples',
+            [
+                'methods'             => 'GET',
+                'callback'            => [$this, 'get_example_prompts'],
                 'permission_callback' => [$this, 'check_edit_permission'],
             ]
         );
@@ -417,48 +482,101 @@ class REST_API {
     /**
      * Get templates
      *
+     * @param \WP_REST_Request $request Request object.
      * @return \WP_REST_Response
      */
-    public function get_templates() {
-        // Template library will be expanded in Phase 3
-        $templates = [
-            [
-                'id'          => 'cta-simple',
-                'name'        => __('Simple CTA', 'gen-blocks'),
-                'description' => __('A centered call-to-action with heading, text, and button', 'gen-blocks'),
-                'category'    => 'call-to-action',
-                'prompt'      => 'Create a CTA section with a title, description, and button',
-                'preview'     => '',
-            ],
-            [
-                'id'          => 'hero-centered',
-                'name'        => __('Centered Hero', 'gen-blocks'),
-                'description' => __('A hero section with large heading, subtitle, and two buttons', 'gen-blocks'),
-                'category'    => 'hero',
-                'prompt'      => 'Create a hero section with large heading, subtitle, and two buttons',
-                'preview'     => '',
-            ],
-            [
-                'id'          => 'features-3col',
-                'name'        => __('3-Column Features', 'gen-blocks'),
-                'description' => __('A three-column feature section with icons', 'gen-blocks'),
-                'category'    => 'features',
-                'prompt'      => 'Create a 3-column feature section with headings and descriptions',
-                'preview'     => '',
-            ],
-            [
-                'id'          => 'testimonial',
-                'name'        => __('Testimonial', 'gen-blocks'),
-                'description' => __('A testimonial block with quote and attribution', 'gen-blocks'),
-                'category'    => 'social-proof',
-                'prompt'      => 'Create a testimonial block with a quote, author name, and role',
-                'preview'     => '',
-            ],
-        ];
+    public function get_templates($request = null) {
+        $category = $request ? $request->get_param('category') : null;
+
+        if ($category) {
+            $templates = $this->template_library->get_by_category($category);
+        } else {
+            $templates = $this->template_library->get_all();
+        }
+
+        $categories = $this->template_library->get_categories();
 
         return rest_ensure_response([
-            'success'   => true,
-            'templates' => apply_filters('genblocks_templates', $templates),
+            'success'    => true,
+            'templates'  => $templates,
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Get single template by ID
+     *
+     * @param \WP_REST_Request $request Request object.
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function get_template($request) {
+        $id = $request->get_param('id');
+        $template = $this->template_library->get_by_id($id);
+
+        if (!$template) {
+            return new \WP_Error(
+                'template_not_found',
+                __('Template not found', 'get-blocks'),
+                ['status' => 404]
+            );
+        }
+
+        return rest_ensure_response([
+            'success'  => true,
+            'template' => $template,
+        ]);
+    }
+
+    /**
+     * Apply template with variables
+     *
+     * @param \WP_REST_Request $request Request object.
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function apply_template($request) {
+        $id = $request->get_param('id');
+        $variables = $request->get_param('variables') ?: [];
+
+        $structure = $this->template_library->apply($id, $variables);
+
+        if (!$structure) {
+            return new \WP_Error(
+                'template_not_found',
+                __('Template not found', 'get-blocks'),
+                ['status' => 404]
+            );
+        }
+
+        // Process through block generator for serialization
+        try {
+            $result = $this->block_generator->process($structure);
+
+            return rest_ensure_response([
+                'success'    => true,
+                'block'      => $result['block_json'],
+                'serialized' => $result['block'],
+            ]);
+        } catch (\Exception $e) {
+            return new \WP_Error(
+                'template_error',
+                $e->getMessage(),
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Get example prompts
+     *
+     * @return \WP_REST_Response
+     */
+    public function get_example_prompts() {
+        $prompt_templates = $this->ai_engine->get_prompt_templates();
+        $examples = $prompt_templates->get_example_prompts();
+
+        return rest_ensure_response([
+            'success'  => true,
+            'examples' => $examples,
         ]);
     }
 
