@@ -7,6 +7,26 @@
 import { createBlock } from '@wordpress/blocks';
 
 /**
+ * Normalize attribute keys for blocks that expect camelCase (e.g. core/group uses className not classname)
+ *
+ * @param {string} blockName Block type name
+ * @param {Object} attrs     Raw attributes from API
+ * @return {Object} Normalized attributes
+ */
+function normalizeBlockAttrs(blockName, attrs) {
+    if (!attrs || typeof attrs !== 'object') {
+        return attrs || {};
+    }
+    const normalized = { ...attrs };
+    // core/group and others use className in block.json; API may return classname
+    if ('classname' in normalized && !('className' in normalized)) {
+        normalized.className = normalized.classname;
+        delete normalized.classname;
+    }
+    return normalized;
+}
+
+/**
  * Convert AI response block data to Gutenberg block
  *
  * @param {Object} blockData - Block data from AI response
@@ -18,7 +38,9 @@ export function convertToBlock(blockData) {
         return null;
     }
 
-    const { blockName, attrs = {}, innerBlocks = [] } = blockData;
+    const { blockName, innerBlocks = [] } = blockData;
+    const rawAttrs = blockData.attrs || {};
+    const attrs = normalizeBlockAttrs(blockName, rawAttrs);
 
     // Recursively convert inner blocks
     const convertedInnerBlocks = innerBlocks

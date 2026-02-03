@@ -77,7 +77,7 @@ class Response_Parser {
         if (empty($cleaned)) {
             return new \WP_Error(
                 'empty_response',
-                __('AI returned an empty response', 'get-blocks')
+                __('AI returned an empty response', 'gen-blocks')
             );
         }
 
@@ -92,13 +92,30 @@ class Response_Parser {
         $data = json_decode($json_string, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
+            // Try to identify the issue
+            $error_details = [
+                'json_error'   => json_last_error_msg(),
+                'json_string'  => substr($json_string, 0, 500),
+                'raw_response' => substr($content, 0, 500),
+            ];
+
+            // Check for common issues
+            $debug_info = '';
+            if (strpos($json_string, '```') !== false) {
+                $debug_info = ' The response still contains markdown code fences.';
+            }
+            if (strpos($content, '```') !== false && strpos($json_string, '```') === false) {
+                $debug_info = ' Original response had markdown fences that were partially cleaned.';
+            }
+
             return new \WP_Error(
                 'json_parse_error',
                 sprintf(
-                    __('Failed to parse response as JSON: %s', 'get-blocks'),
-                    json_last_error_msg()
+                    __('Failed to parse response as JSON: %s%s', 'gen-blocks'),
+                    json_last_error_msg(),
+                    $debug_info
                 ),
-                ['raw_response' => substr($content, 0, 500)]
+                $error_details
             );
         }
 
@@ -128,12 +145,22 @@ class Response_Parser {
         // Trim whitespace
         $content = trim($content);
 
-        // Remove markdown code block markers
-        $content = preg_replace('/^```(?:json)?\s*/m', '', $content);
-        $content = preg_replace('/\s*```$/m', '', $content);
-
         // Remove any BOM or special characters at start
         $content = preg_replace('/^\x{FEFF}/u', '', $content);
+
+        // Remove markdown code block markers (various formats)
+        // Handles: ```json, ``` json, ```JSON, ```\n, etc.
+        $content = preg_replace('/^[\s]*```[\s]*(json|JSON)?[\s]*/s', '', $content);
+        $content = preg_replace('/[\s]*```[\s]*$/s', '', $content);
+
+        // Also handle if there are multiple code blocks - take content between first ``` and last ```
+        if (preg_match('/```(?:json|JSON)?[\s\n]*([\s\S]*?)[\s\n]*```/', $content, $matches)) {
+            $content = trim($matches[1]);
+        }
+
+        // Remove leading/trailing backticks that might remain
+        $content = trim($content, '`');
+        $content = trim($content);
 
         // Remove common AI prefixes
         $prefixes = [
@@ -141,6 +168,8 @@ class Response_Parser {
             'Here\'s the JSON:',
             'Here is the block:',
             'Here\'s the block:',
+            'Here is the Gutenberg block JSON:',
+            'Here\'s the Gutenberg block:',
             'JSON output:',
             'Output:',
             'Result:',
@@ -149,6 +178,17 @@ class Response_Parser {
         foreach ($prefixes as $prefix) {
             if (stripos($content, $prefix) === 0) {
                 $content = trim(substr($content, strlen($prefix)));
+            }
+        }
+
+        // Remove any text before the first { (common with chatty AI responses)
+        $first_brace = strpos($content, '{');
+        if ($first_brace !== false && $first_brace > 0) {
+            // Check if there's meaningful JSON starting with {
+            $potential_json = substr($content, $first_brace);
+            // Verify it looks like JSON (starts with { and ends with })
+            if (preg_match('/^\{.*\}$/s', trim($potential_json))) {
+                $content = $potential_json;
             }
         }
 
@@ -163,8 +203,12 @@ class Response_Parser {
      */
     private function extract_json($content) {
         // If content starts with {, assume it's JSON
-        if (strpos($content, '{') === 0) {
-            return $content;
+        if (strpos(trim($content), '{') === 0) {
+            $content = trim($content);
+            // Make sure it ends with }
+            if (substr($content, -1) === '}') {
+                return $content;
+            }
         }
 
         // Find first { and last }
@@ -174,12 +218,31 @@ class Response_Parser {
         if ($first_brace === false || $last_brace === false) {
             return new \WP_Error(
                 'no_json_found',
-                __('Could not find valid JSON in AI response', 'get-blocks'),
-                ['raw_response' => substr($content, 0, 500)]
+                __('Could not find valid JSON in AI response. The response may have been truncated or the AI did not return JSON.', 'gen-blocks'),
+                ['raw_response' => substr($content, 0, 1000)]
             );
         }
 
-        return substr($content, $first_brace, $last_brace - $first_brace + 1);
+        // Extract the JSON portion
+        $json_string = substr($content, $first_brace, $last_brace - $first_brace + 1);
+
+        // Basic validation - count braces to check for balance
+        $open_braces = substr_count($json_string, '{');
+        $close_braces = substr_count($json_string, '}');
+
+        if ($open_braces !== $close_braces) {
+            return new \WP_Error(
+                'json_truncated',
+                sprintf(
+                    __('JSON appears to be truncated or malformed. Open braces: %d, Close braces: %d', 'gen-blocks'),
+                    $open_braces,
+                    $close_braces
+                ),
+                ['raw_response' => substr($content, 0, 1000)]
+            );
+        }
+
+        return $json_string;
     }
 
     /**
@@ -193,7 +256,7 @@ class Response_Parser {
         if (!is_array($data)) {
             return new \WP_Error(
                 'invalid_structure',
-                __('Block data must be an object', 'get-blocks')
+                __('Block data must be an object', 'gen-blocks')
             );
         }
 
@@ -201,7 +264,7 @@ class Response_Parser {
         if (!isset($data['blockName'])) {
             return new \WP_Error(
                 'missing_block_name',
-                __('Block is missing required blockName field', 'get-blocks')
+                __('Block is missing required blockName field', 'gen-blocks')
             );
         }
 
@@ -210,7 +273,7 @@ class Response_Parser {
             return new \WP_Error(
                 'invalid_block_name',
                 sprintf(
-                    __('Invalid block name: %s', 'get-blocks'),
+                    __('Invalid block name: %s', 'gen-blocks'),
                     $data['blockName']
                 )
             );
@@ -224,7 +287,7 @@ class Response_Parser {
                     return new \WP_Error(
                         'invalid_inner_block',
                         sprintf(
-                            __('Invalid inner block at index %d: %s', 'get-blocks'),
+                            __('Invalid inner block at index %d: %s', 'gen-blocks'),
                             $index,
                             $inner_validation->get_error_message()
                         )
