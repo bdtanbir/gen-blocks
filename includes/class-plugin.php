@@ -22,6 +22,41 @@ class Plugin {
     private static $instance = null;
 
     /**
+     * Settings instance
+     *
+     * @var Settings|null
+     */
+    private $settings = null;
+
+    /**
+     * AI Engine instance
+     *
+     * @var AI_Engine|null
+     */
+    private $ai_engine = null;
+
+    /**
+     * REST API instance
+     *
+     * @var REST_API|null
+     */
+    private $rest_api = null;
+
+    /**
+     * Usage Tracker instance
+     *
+     * @var Usage_Tracker|null
+     */
+    private $usage_tracker = null;
+
+    /**
+     * Block Generator instance
+     *
+     * @var Block_Generator|null
+     */
+    private $block_generator = null;
+
+    /**
      * Get the singleton instance
      *
      * @return Plugin
@@ -37,54 +72,76 @@ class Plugin {
      * Constructor - private to enforce singleton
      */
     private function __construct() {
+        $this->load_dependencies();
+        $this->init_components();
         $this->init_hooks();
+    }
+
+    /**
+     * Load required class files
+     */
+    private function load_dependencies() {
+        $includes_dir = GENBLOCKS_PLUGIN_DIR . 'includes/';
+
+        require_once $includes_dir . 'class-settings.php';
+        require_once $includes_dir . 'class-encryption.php';
+        require_once $includes_dir . 'class-ai-engine.php';
+        require_once $includes_dir . 'class-block-generator.php';
+        require_once $includes_dir . 'class-rest-api.php';
+        require_once $includes_dir . 'class-usage-tracker.php';
+    }
+
+    /**
+     * Initialize plugin components
+     */
+    private function init_components() {
+        $this->settings = new Settings();
+        $this->usage_tracker = new Usage_Tracker();
+        $this->ai_engine = new AI_Engine($this->settings);
+        $this->block_generator = new Block_Generator();
+        $this->rest_api = new REST_API($this->ai_engine, $this->block_generator, $this->settings, $this->usage_tracker);
     }
 
     /**
      * Initialize hooks
      */
     private function init_hooks() {
-        // REST API endpoints will be registered in Phase 2
-        add_action('rest_api_init', [$this, 'register_rest_routes']);
+        add_action('rest_api_init', [$this->rest_api, 'register_routes']);
     }
 
     /**
-     * Register REST API routes
-     * Will be fully implemented in Phase 2
-     */
-    public function register_rest_routes() {
-        // REST routes will be added in Phase 2
-    }
-
-    /**
-     * Get plugin settings
+     * Get settings instance
      *
-     * @return array
+     * @return Settings
      */
     public function get_settings() {
-        $defaults = [
-            'api_provider' => 'openai',
-            'api_key' => '',
-            'rate_limit' => 100,
-            'cache_enabled' => true,
-            'cache_duration' => 3600,
-            'primary_color' => '#0073aa',
-            'default_alignment' => 'center',
-        ];
-
-        $settings = get_option('genblocks_settings', $defaults);
-        return wp_parse_args($settings, $defaults);
+        return $this->settings;
     }
 
     /**
-     * Update plugin settings
+     * Get AI Engine instance
      *
-     * @param array $new_settings Settings to update.
-     * @return bool
+     * @return AI_Engine
      */
-    public function update_settings($new_settings) {
-        $current = $this->get_settings();
-        $updated = array_merge($current, $new_settings);
-        return update_option('genblocks_settings', $updated);
+    public function get_ai_engine() {
+        return $this->ai_engine;
+    }
+
+    /**
+     * Get Usage Tracker instance
+     *
+     * @return Usage_Tracker
+     */
+    public function get_usage_tracker() {
+        return $this->usage_tracker;
+    }
+
+    /**
+     * Get Block Generator instance
+     *
+     * @return Block_Generator
+     */
+    public function get_block_generator() {
+        return $this->block_generator;
     }
 }
