@@ -22,9 +22,40 @@ define('GENBLOCKS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('GENBLOCKS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('GENBLOCKS_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
-define('GENBLOCKS_OPENROUTER_API_KEY', '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');
-define('GENBLOCKS_DEV_MODE', true);
-define('GENBLOCKS_OPENROUTER_MODEL', 'meta-llama/llama-3.2-3b-instruct:free');
+/**
+ * Dev Mode Configuration
+ *
+ * IMPORTANT: For security, define API keys in wp-config.php, not here!
+ *
+ * Add to wp-config.php (before "That's all, stop editing!"):
+ *
+ * // Enable dev mode
+ * define('GENBLOCKS_DEV_MODE', true);
+ *
+ * // Option 1: Anthropic Claude API (Recommended)
+ * define('GENBLOCKS_ANTHROPIC_API_KEY', 'sk-ant-api03-xxxx');
+ * define('GENBLOCKS_ANTHROPIC_MODEL', 'claude-3-5-sonnet-20241022');
+ *
+ * // Option 2: OpenRouter API
+ * define('GENBLOCKS_OPENROUTER_API_KEY', 'sk-or-v1-xxxx');
+ * define('GENBLOCKS_OPENROUTER_MODEL', 'anthropic/claude-3-haiku');
+ *
+ * Provider Priority: Anthropic > OpenRouter > OpenAI (settings)
+ */
+if (!defined('GENBLOCKS_DEV_MODE')) {
+    define('GENBLOCKS_DEV_MODE', true);
+}
+
+// Default Anthropic model if not set
+if (!defined('GENBLOCKS_ANTHROPIC_MODEL')) {
+    define('GENBLOCKS_ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001');
+//    define('GENBLOCKS_ANTHROPIC_MODEL', 'claude-hiku-1.0');
+}
+
+// Default OpenRouter model if not set
+//if (!defined('GENBLOCKS_OPENROUTER_MODEL')) {
+////    define('GENBLOCKS_OPENROUTER_MODEL', 'anthropic/claude-3-haiku');
+//}
 
 // Autoloader
 spl_autoload_register(function ($class) {

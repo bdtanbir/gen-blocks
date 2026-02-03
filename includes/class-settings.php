@@ -35,7 +35,7 @@ class Settings {
         'cache_duration'    => 3600,
         'primary_color'     => '#0073aa',
         'default_alignment' => 'center',
-        'max_tokens'        => 2000,
+        'max_tokens'        => 8192, // Increased for complex block generation
         'temperature'       => 0.7,
     ];
 
