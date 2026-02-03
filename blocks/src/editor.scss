@@ -97,3 +97,37 @@
         margin: 0;
     }
 }
+
+/**
+ * Simple Card Block - Editor Styles
+ */
+.wp-block-genblocks-simple-card {
+    // Editor-specific padding for better UX
+    min-height: 100px;
+
+    &__title,
+    &__description {
+        // Placeholder styling
+        &[data-rich-text-placeholder]::before {
+            color: #757575;
+            font-style: italic;
+        }
+    }
+
+    &__title {
+        &:focus {
+            outline: none;
+        }
+    }
+
+    &__description {
+        &:focus {
+            outline: none;
+        }
+    }
+
+    // Selected state
+    &.is-selected {
+        border-color: #007cba;
+    }
+}

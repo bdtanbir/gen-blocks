@@ -78,6 +78,13 @@ class Plugin {
     private $template_library = null;
 
     /**
+     * Registered blocks
+     *
+     * @var array
+     */
+    private $blocks = [];
+
+    /**
      * Get the singleton instance
      *
      * @return Plugin
@@ -95,6 +102,7 @@ class Plugin {
     private function __construct() {
         $this->load_dependencies();
         $this->init_components();
+        $this->init_blocks();
         $this->init_hooks();
     }
 
@@ -113,6 +121,10 @@ class Plugin {
         require_once $includes_dir . 'class-block-generator.php';
         require_once $includes_dir . 'class-rest-api.php';
         require_once $includes_dir . 'class-usage-tracker.php';
+
+        // Block base class and blocks
+        require_once $includes_dir . 'class-block-base.php';
+        require_once $includes_dir . 'blocks/class-block-simple-card.php';
     }
 
     /**
@@ -133,6 +145,13 @@ class Plugin {
             $this->usage_tracker,
             $this->template_library
         );
+    }
+
+    /**
+     * Initialize Gutenberg blocks
+     */
+    private function init_blocks() {
+        $this->blocks['simple-card'] = new Blocks\Block_Simple_Card();
     }
 
     /**
@@ -203,5 +222,24 @@ class Plugin {
      */
     public function get_template_library() {
         return $this->template_library;
+    }
+
+    /**
+     * Get a registered block instance
+     *
+     * @param string $name Block name (without namespace).
+     * @return Block_Base|null
+     */
+    public function get_block($name) {
+        return $this->blocks[$name] ?? null;
+    }
+
+    /**
+     * Get all registered blocks
+     *
+     * @return array
+     */
+    public function get_blocks() {
+        return $this->blocks;
     }
 }
