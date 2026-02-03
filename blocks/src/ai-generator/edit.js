@@ -38,7 +38,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
 
-    const { insertBlocks, removeBlock } = useDispatch('core/block-editor');
+    const { replaceBlocks } = useDispatch('core/block-editor');
 
     /**
      * Handle AI generation
@@ -63,20 +63,34 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                 },
             });
 
-            if (response.success && response.block) {
-                const blockData = parseAIResponse(response);
-                const block = convertToBlock(blockData);
+            if (response.success && (response.block || response.serialized)) {
+                let blocksToInsert = [];
 
-                if (block) {
-                    // Insert the generated block after current block
-                    insertBlocks(block, undefined, clientId);
+                // Prefer block JSON: API returns well-formed block/attrs/innerBlocks.
+                // The "serialized" string is often malformed (broken JSON in comments), so don't rely on it first.
+                if (response.block) {
+                    const block = convertToBlock(parseAIResponse(response));
+                    if (block) {
+                        blocksToInsert = [block];
+                    }
+                }
 
-                    // Show success message briefly, then remove this block
+                // Fallback: parse serialized only when block JSON is missing (e.g. legacy API)
+                if (blocksToInsert.length === 0 && response.serialized && typeof response.serialized === 'string') {
+                    try {
+                        const parsed = parse(response.serialized.trim());
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            blocksToInsert = parsed;
+                        }
+                    } catch (parseErr) {
+                        console.warn('Parse serialized failed:', parseErr);
+                    }
+                }
+
+                if (blocksToInsert.length > 0) {
+                    // Replace this AI generator block with the generated block(s) in one shot
+                    replaceBlocks(clientId, blocksToInsert);
                     setSuccess(__('Block generated successfully!', 'gen-blocks'));
-
-                    setTimeout(() => {
-                        removeBlock(clientId);
-                    }, 1000);
                 } else {
                     setError(__('Failed to create block from AI response.', 'gen-blocks'));
                 }
