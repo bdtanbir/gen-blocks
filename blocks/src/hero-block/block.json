@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "genblocks/hero",
+    "version": "1.0.0",
+    "title": "Hero Block",
+    "category": "genblocks",
+    "icon": "cover-image",
+    "description": "A hero section with heading, subtitle, and buttons.",
+    "keywords": ["hero", "banner", "header", "genblocks", "landing"],
+    "textdomain": "gen-blocks",
+    "attributes": {
+        "heading": {
+            "type": "string",
+            "default": "Welcome to Our Website"
+        },
+        "subtitle": {
+            "type": "string",
+            "default": "Discover amazing features and take your experience to the next level."
+        },
+        "primaryButtonText": {
+            "type": "string",
+            "default": "Get Started"
+        },
+        "primaryButtonUrl": {
+            "type": "string",
+            "default": "#"
+        },
+        "secondaryButtonText": {
+            "type": "string",
+            "default": "Learn More"
+        },
+        "secondaryButtonUrl": {
+            "type": "string",
+            "default": "#"
+        },
+        "showSecondaryButton": {
+            "type": "boolean",
+            "default": true
+        },
+        "backgroundColor": {
+            "type": "string",
+            "default": "#1e1e1e"
+        },
+        "textColor": {
+            "type": "string",
+            "default": "#ffffff"
+        },
+        "primaryButtonColor": {
+            "type": "string",
+            "default": "#0073aa"
+        },
+        "primaryButtonTextColor": {
+            "type": "string",
+            "default": "#ffffff"
+        },
+        "secondaryButtonColor": {
+            "type": "string",
+            "default": "transparent"
+        },
+        "secondaryButtonTextColor": {
+            "type": "string",
+            "default": "#ffffff"
+        },
+        "textAlign": {
+            "type": "string",
+            "default": "center"
+        },
+        "minHeight": {
+            "type": "number",
+            "default": 500
+        },
+        "overlayOpacity": {
+            "type": "number",
+            "default": 0
+        },
+        "backgroundImage": {
+            "type": "string",
+            "default": ""
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "anchor": true,
+        "spacing": {
+            "margin": true
+        }
+    },
+    "example": {
+        "attributes": {
+            "heading": "Welcome to Our Website",
+            "subtitle": "Discover amazing features and take your experience to the next level.",
+            "primaryButtonText": "Get Started",
+            "secondaryButtonText": "Learn More"
+        }
+    },
+    "editorScript": "genblocks-editor",
+    "editorStyle": "genblocks-editor-style",
+    "style": "genblocks-blocks"
+}

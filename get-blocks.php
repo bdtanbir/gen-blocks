@@ -22,6 +22,10 @@ define('GENBLOCKS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('GENBLOCKS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('GENBLOCKS_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
+define('GENBLOCKS_OPENROUTER_API_KEY', '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');
+define('GENBLOCKS_DEV_MODE', true);
+define('GENBLOCKS_OPENROUTER_MODEL', 'meta-llama/llama-3.2-3b-instruct:free');
+
 // Autoloader
 spl_autoload_register(function ($class) {
     $prefix = 'GenBlocks\\';

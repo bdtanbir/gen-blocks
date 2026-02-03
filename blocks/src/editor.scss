@@ -131,3 +131,179 @@
         border-color: #007cba;
     }
 }
+
+/**
+ * AI Generator Block - Editor Styles
+ */
+.wp-block-genblocks-ai-generator {
+    padding: 24px;
+    border: 2px dashed #0073aa;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f0f7fc 0%, #e8f4f8 100%);
+
+    .genblocks-ai-generator__header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .genblocks-ai-generator__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: #0073aa;
+        border-radius: 8px;
+        color: #fff;
+
+        svg {
+            fill: currentColor;
+        }
+    }
+
+    .genblocks-ai-generator__title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e1e1e;
+        margin: 0;
+    }
+
+    .genblocks-ai-generator__content {
+        .components-base-control {
+            margin-bottom: 16px;
+        }
+
+        .components-textarea-control__input {
+            min-height: 100px;
+            font-size: 14px;
+        }
+    }
+
+    .genblocks-ai-generator__examples {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #ddd;
+    }
+
+    .genblocks-ai-generator__examples-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: #1e1e1e;
+        margin-bottom: 12px;
+    }
+
+    .genblocks-ai-generator__examples-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        li {
+            margin: 0;
+        }
+
+        button {
+            padding: 8px 14px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #1e1e1e;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+
+            &:hover {
+                background-color: #0073aa;
+                border-color: #0073aa;
+                color: #fff;
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+    }
+}
+
+/**
+ * CTA Block - Editor Styles
+ */
+.wp-block-genblocks-cta {
+    min-height: 200px;
+
+    &__title,
+    &__description,
+    &__button {
+        &:focus {
+            outline: none;
+        }
+
+        &[data-rich-text-placeholder]::before {
+            opacity: 0.6;
+        }
+    }
+
+    &__button {
+        cursor: text;
+    }
+
+    &.is-selected {
+        box-shadow: 0 0 0 2px #007cba;
+    }
+}
+
+/**
+ * Hero Block - Editor Styles
+ */
+.wp-block-genblocks-hero {
+    min-height: 400px;
+
+    &__heading,
+    &__subtitle,
+    &__button {
+        &:focus {
+            outline: none;
+        }
+
+        &[data-rich-text-placeholder]::before {
+            opacity: 0.6;
+        }
+    }
+
+    &__button {
+        cursor: text;
+    }
+
+    &.is-selected {
+        box-shadow: 0 0 0 2px #007cba;
+    }
+}
+
+/**
+ * Sidebar History List
+ */
+.genblocks-history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+        border-bottom: 1px solid #eee;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        button:hover {
+            background-color: #f0f0f0 !important;
+        }
+    }
+}

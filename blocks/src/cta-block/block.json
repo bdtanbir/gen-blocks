@@ -1,0 +1,75 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "genblocks/cta",
+    "version": "1.0.0",
+    "title": "CTA Block",
+    "category": "genblocks",
+    "icon": "megaphone",
+    "description": "A call-to-action block with title, description, and button.",
+    "keywords": ["cta", "call to action", "button", "genblocks", "conversion"],
+    "textdomain": "gen-blocks",
+    "attributes": {
+        "title": {
+            "type": "string",
+            "default": "Ready to Get Started?"
+        },
+        "description": {
+            "type": "string",
+            "default": "Join thousands of satisfied customers and take your business to the next level."
+        },
+        "buttonText": {
+            "type": "string",
+            "default": "Get Started"
+        },
+        "buttonUrl": {
+            "type": "string",
+            "default": "#"
+        },
+        "backgroundColor": {
+            "type": "string",
+            "default": "#0073aa"
+        },
+        "textColor": {
+            "type": "string",
+            "default": "#ffffff"
+        },
+        "buttonColor": {
+            "type": "string",
+            "default": "#ffffff"
+        },
+        "buttonTextColor": {
+            "type": "string",
+            "default": "#0073aa"
+        },
+        "textAlign": {
+            "type": "string",
+            "default": "center"
+        },
+        "padding": {
+            "type": "number",
+            "default": 60
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "anchor": true,
+        "spacing": {
+            "margin": true,
+            "padding": false
+        }
+    },
+    "example": {
+        "attributes": {
+            "title": "Ready to Get Started?",
+            "description": "Join thousands of satisfied customers today.",
+            "buttonText": "Get Started",
+            "backgroundColor": "#0073aa",
+            "textColor": "#ffffff"
+        }
+    },
+    "editorScript": "genblocks-editor",
+    "editorStyle": "genblocks-editor-style",
+    "style": "genblocks-blocks"
+}

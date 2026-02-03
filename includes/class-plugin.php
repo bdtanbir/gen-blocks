@@ -125,6 +125,8 @@ class Plugin {
         // Block base class and blocks
         require_once $includes_dir . 'class-block-base.php';
         require_once $includes_dir . 'blocks/class-block-simple-card.php';
+        require_once $includes_dir . 'blocks/class-block-cta.php';
+        require_once $includes_dir . 'blocks/class-block-hero.php';
     }
 
     /**
@@ -152,6 +154,8 @@ class Plugin {
      */
     private function init_blocks() {
         $this->blocks['simple-card'] = new Blocks\Block_Simple_Card();
+        $this->blocks['cta']         = new Blocks\Block_CTA();
+        $this->blocks['hero']        = new Blocks\Block_Hero();
     }
 
     /**

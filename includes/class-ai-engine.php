@@ -43,6 +43,20 @@ class AI_Engine {
     private $openai_endpoint = 'https://api.openai.com/v1/chat/completions';
 
     /**
+     * OpenRouter API endpoint
+     *
+     * @var string
+     */
+    private $openrouter_endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+
+    /**
+     * Whether dev mode is enabled (uses OpenRouter)
+     *
+     * @var bool
+     */
+    private $dev_mode = false;
+
+    /**
      * Constructor
      *
      * @param Settings         $settings         Settings instance.
@@ -53,6 +67,50 @@ class AI_Engine {
         $this->settings = $settings;
         $this->prompt_templates = $prompt_templates ?: new Prompt_Templates();
         $this->response_parser = $response_parser ?: new Response_Parser();
+
+        // Check if dev mode is enabled (OpenRouter with static API key)
+        $this->dev_mode = defined('GENBLOCKS_DEV_MODE') && GENBLOCKS_DEV_MODE;
+    }
+
+    /**
+     * Check if dev mode is enabled
+     *
+     * @return bool
+     */
+    public function is_dev_mode() {
+        return $this->dev_mode;
+    }
+
+    /**
+     * Get the OpenRouter API key for dev mode
+     *
+     * @return string|null
+     */
+    private function get_openrouter_api_key() {
+        // First check for constant
+        if (defined('GENBLOCKS_OPENROUTER_API_KEY')) {
+            return GENBLOCKS_OPENROUTER_API_KEY;
+        }
+
+        // Fallback: check settings for openrouter_api_key
+        return $this->settings->get('openrouter_api_key', '');
+    }
+
+    /**
+     * Get the model to use based on mode
+     *
+     * @return string
+     */
+    private function get_model() {
+        if ($this->dev_mode) {
+            // Use a cost-effective model for dev mode via OpenRouter
+            // Options: anthropic/claude-3-haiku, openai/gpt-3.5-turbo, google/gemini-flash-1.5
+            return defined('GENBLOCKS_OPENROUTER_MODEL')
+                ? GENBLOCKS_OPENROUTER_MODEL
+                : 'anthropic/claude-3.5-sonnet';
+        }
+
+        return $this->settings->get('model', 'gpt-4');
     }
 
     /**
@@ -63,11 +121,20 @@ class AI_Engine {
      * @return array|WP_Error Generated block data or error.
      */
     public function generate_block($prompt, $context = []) {
-        // Check if API key is set
-        if (!$this->settings->has_api_key()) {
+        // Check if API key is set (dev mode uses OpenRouter key)
+        if ($this->dev_mode) {
+            $openrouter_key = $this->get_openrouter_api_key();
+            if (empty($openrouter_key)) {
+                return new \WP_Error(
+                    'no_api_key',
+                    __('Dev mode is enabled but GENBLOCKS_OPENROUTER_API_KEY is not defined.', 'gen-blocks'),
+                    ['status' => 400]
+                );
+            }
+        } elseif (!$this->settings->has_api_key()) {
             return new \WP_Error(
                 'no_api_key',
-                __('API key is not configured. Please add your OpenAI API key in settings.', 'get-blocks'),
+                __('API key is not configured. Please add your OpenAI API key in settings.', 'gen-blocks'),
                 ['status' => 400]
             );
         }
@@ -90,8 +157,10 @@ class AI_Engine {
         $enhanced_prompt = $this->prompt_templates->enhance_prompt($prompt);
         $full_prompt = $this->prompt_templates->build_user_prompt($enhanced_prompt, $context);
 
-        // Call AI API
-        $response = $this->call_openai($full_prompt);
+        // Call AI API (OpenRouter in dev mode, OpenAI in production)
+        $response = $this->dev_mode
+            ? $this->call_openrouter($full_prompt)
+            : $this->call_openai($full_prompt);
 
         if (is_wp_error($response)) {
             return $response;
@@ -220,6 +289,89 @@ class AI_Engine {
     }
 
     /**
+     * Call OpenRouter API (for dev mode)
+     *
+     * @param string $prompt Full prompt to send.
+     * @return array|WP_Error Response data or error.
+     */
+    private function call_openrouter($prompt) {
+        $api_key = $this->get_openrouter_api_key();
+        $model = $this->get_model();
+        $max_tokens = $this->settings->get('max_tokens', 2000);
+        $temperature = $this->settings->get('temperature', 0.7);
+
+        $body = [
+            'model'       => $model,
+            'messages'    => [
+                [
+                    'role'    => 'system',
+                    'content' => $this->prompt_templates->get_system_prompt(),
+                ],
+                [
+                    'role'    => 'user',
+                    'content' => $prompt,
+                ],
+            ],
+            'max_tokens'  => $max_tokens,
+            'temperature' => $temperature,
+        ];
+
+        $response = wp_remote_post(
+            $this->openrouter_endpoint,
+            [
+                'timeout' => 120,
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $api_key,
+                    'Content-Type'  => 'application/json',
+                    'HTTP-Referer'  => home_url(),
+                    'X-Title'       => 'GenBlocks WordPress Plugin',
+                ],
+                'body'    => wp_json_encode($body),
+            ]
+        );
+
+        if (is_wp_error($response)) {
+            return new \WP_Error(
+                'api_request_failed',
+                __('Failed to connect to OpenRouter API: ', 'gen-blocks') . $response->get_error_message(),
+                ['status' => 500]
+            );
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+
+        if ($status_code !== 200) {
+            $error_message = isset($data['error']['message'])
+                ? $data['error']['message']
+                : __('Unknown API error', 'gen-blocks');
+
+            return new \WP_Error(
+                'api_error',
+                $error_message,
+                ['status' => $status_code]
+            );
+        }
+
+        if (!isset($data['choices'][0]['message']['content'])) {
+            return new \WP_Error(
+                'invalid_response',
+                __('Invalid response from OpenRouter API', 'gen-blocks'),
+                ['status' => 500]
+            );
+        }
+
+        return [
+            'content'           => $data['choices'][0]['message']['content'],
+            'tokens_used'       => $data['usage']['total_tokens'] ?? 0,
+            'prompt_tokens'     => $data['usage']['prompt_tokens'] ?? 0,
+            'completion_tokens' => $data['usage']['completion_tokens'] ?? 0,
+            'model'             => $data['model'] ?? $model,
+        ];
+    }
+
+    /**
      * Get cached response
      *
      * @param string $prompt  User prompt.
@@ -286,6 +438,12 @@ class AI_Engine {
      * @return array|WP_Error Test result or error.
      */
     public function test_connection() {
+        // Dev mode: test OpenRouter connection
+        if ($this->dev_mode) {
+            return $this->test_openrouter_connection();
+        }
+
+        // Production: test OpenAI connection
         if (!$this->settings->has_api_key()) {
             return new \WP_Error(
                 'no_api_key',
@@ -320,6 +478,76 @@ class AI_Engine {
             return [
                 'success' => true,
                 'message' => __('Successfully connected to OpenAI API', 'gen-blocks'),
+            ];
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        $error_message = isset($data['error']['message'])
+            ? $data['error']['message']
+            : __('Invalid API key or connection error', 'gen-blocks');
+
+        return new \WP_Error(
+            'api_error',
+            $error_message,
+            ['status' => $status_code]
+        );
+    }
+
+    /**
+     * Test OpenRouter API connection
+     *
+     * @return array|WP_Error Test result or error.
+     */
+    private function test_openrouter_connection() {
+        $api_key = $this->get_openrouter_api_key();
+
+        if (empty($api_key)) {
+            return new \WP_Error(
+                'no_api_key',
+                __('OpenRouter API key is not configured. Define GENBLOCKS_OPENROUTER_API_KEY in wp-config.php', 'gen-blocks'),
+                ['status' => 400]
+            );
+        }
+
+        // OpenRouter doesn't have a models endpoint like OpenAI
+        // So we'll make a minimal chat completion request to test
+        $response = wp_remote_post(
+            $this->openrouter_endpoint,
+            [
+                'timeout' => 30,
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $api_key,
+                    'Content-Type'  => 'application/json',
+                    'HTTP-Referer'  => home_url(),
+                    'X-Title'       => 'GenBlocks WordPress Plugin',
+                ],
+                'body'    => wp_json_encode([
+                    'model'      => $this->get_model(),
+                    'messages'   => [
+                        ['role' => 'user', 'content' => 'Say "OK" if you can hear me.'],
+                    ],
+                    'max_tokens' => 10,
+                ]),
+            ]
+        );
+
+        if (is_wp_error($response)) {
+            return new \WP_Error(
+                'connection_failed',
+                __('Failed to connect to OpenRouter API: ', 'gen-blocks') . $response->get_error_message(),
+                ['status' => 500]
+            );
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+
+        if ($status_code === 200) {
+            return [
+                'success'  => true,
+                'message'  => __('Successfully connected to OpenRouter API (Dev Mode)', 'gen-blocks'),
+                'dev_mode' => true,
+                'model'    => $this->get_model(),
             ];
         }
 
