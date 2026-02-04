@@ -189,6 +189,10 @@ class AI_Engine {
      * @return array|WP_Error Generated block data or error.
      */
     public function generate_block($prompt, $context = []) {
+        // Extend PHP execution time for AI operations
+        // API calls can take up to 120 seconds, plus parsing time
+        $this->extend_execution_time();
+
         // Check if API key is set based on provider
         $api_key_error = $this->validate_api_key();
         if (is_wp_error($api_key_error)) {
@@ -241,6 +245,22 @@ class AI_Engine {
         }
 
         return $block_data;
+    }
+
+    /**
+     * Extend PHP execution time for long-running AI operations
+     *
+     * @return void
+     */
+    private function extend_execution_time() {
+        // Only extend if we can and if current limit is less than 180 seconds
+        // We need 120s for API timeout + 60s buffer for processing
+        $current_limit = (int) ini_get('max_execution_time');
+        if ($current_limit > 0 && $current_limit < 180) {
+            if (function_exists('set_time_limit') && !ini_get('safe_mode')) {
+                @set_time_limit(180);
+            }
+        }
     }
 
     /**

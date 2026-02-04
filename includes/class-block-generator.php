@@ -15,6 +15,13 @@ defined('ABSPATH') || exit;
 class Block_Generator {
 
     /**
+     * Maximum allowed nesting depth for blocks
+     *
+     * @var int
+     */
+    private const MAX_DEPTH = 10;
+
+    /**
      * Allowed core block types
      *
      * @var array
@@ -62,7 +69,10 @@ class Block_Generator {
     /**
      * Process AI response into valid block structure
      *
-     * @param array $ai_response Raw AI response data.
+     * Note: The Response_Parser already validates and sanitizes blocks,
+     * so this method only performs minimal checks and converts to Gutenberg format.
+     *
+     * @param array $ai_response Raw AI response data (already processed by Response_Parser).
      * @return array Processed block data.
      */
     public function process($ai_response) {
@@ -73,9 +83,9 @@ class Block_Generator {
             unset($ai_response['_meta']);
         }
 
-        // Validate and sanitize the block
-        $block = $this->validate_block($ai_response);
-        $block = $this->sanitize_block($block);
+        // Light validation only - Response_Parser already did thorough validation
+        // This prevents double-recursive processing that causes timeouts
+        $block = $this->ensure_block_structure($ai_response);
 
         // Convert to Gutenberg block format
         $gutenberg_block = $this->to_gutenberg_format($block);
@@ -85,6 +95,28 @@ class Block_Generator {
             'block_json'  => $block,
             'meta'        => $meta,
         ];
+    }
+
+    /**
+     * Ensure block has required structure without full recursive validation
+     * This is a lightweight check since Response_Parser already validated
+     *
+     * @param array $block Block data.
+     * @return array Block with ensured structure.
+     */
+    private function ensure_block_structure($block) {
+        // Ensure required fields exist
+        if (!isset($block['blockName'])) {
+            $block['blockName'] = 'core/group';
+        }
+        if (!isset($block['attrs']) || !is_array($block['attrs'])) {
+            $block['attrs'] = [];
+        }
+        if (!isset($block['innerBlocks']) || !is_array($block['innerBlocks'])) {
+            $block['innerBlocks'] = [];
+        }
+
+        return $block;
     }
 
     /**
@@ -221,22 +253,36 @@ class Block_Generator {
      * Prepare block for serialization
      *
      * @param array $block Block data.
+     * @param int   $depth Current nesting depth.
      * @return array Prepared block.
      */
-    private function prepare_for_serialize($block) {
+    private function prepare_for_serialize($block, $depth = 0) {
+        // Prevent infinite recursion
+        if ($depth > self::MAX_DEPTH) {
+            return [
+                'blockName'    => 'core/paragraph',
+                'attrs'        => ['content' => __('Block nesting limit exceeded', 'gen-blocks')],
+                'innerBlocks'  => [],
+                'innerHTML'    => '<p>' . esc_html__('Block nesting limit exceeded', 'gen-blocks') . '</p>',
+                'innerContent' => ['<p>' . esc_html__('Block nesting limit exceeded', 'gen-blocks') . '</p>'],
+            ];
+        }
+
         $prepared = [
-            'blockName'    => $block['blockName'],
+            'blockName'    => $block['blockName'] ?? 'core/group',
             'attrs'        => $block['attrs'] ?? [],
             'innerBlocks'  => [],
             'innerHTML'    => $this->generate_inner_html($block),
             'innerContent' => [],
         ];
 
-        // Process inner blocks
-        if (!empty($block['innerBlocks'])) {
+        // Process inner blocks with depth tracking
+        if (!empty($block['innerBlocks']) && is_array($block['innerBlocks'])) {
             foreach ($block['innerBlocks'] as $inner_block) {
-                $prepared['innerBlocks'][] = $this->prepare_for_serialize($inner_block);
-                $prepared['innerContent'][] = null; // Placeholder for inner block
+                if (is_array($inner_block)) {
+                    $prepared['innerBlocks'][] = $this->prepare_for_serialize($inner_block, $depth + 1);
+                    $prepared['innerContent'][] = null; // Placeholder for inner block
+                }
             }
         }
 

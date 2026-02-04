@@ -15,6 +15,13 @@ defined('ABSPATH') || exit;
 class Response_Parser {
 
     /**
+     * Maximum allowed nesting depth for blocks
+     *
+     * @var int
+     */
+    private const MAX_DEPTH = 10;
+
+    /**
      * Valid core block names
      *
      * @var array
@@ -71,6 +78,9 @@ class Response_Parser {
      * @return array|\WP_Error Parsed block data or error.
      */
     public function parse($content) {
+        // Extend execution time for complex block processing
+        $this->extend_execution_time();
+
         // Clean the response
         $cleaned = $this->clean_response($content);
 
@@ -119,20 +129,149 @@ class Response_Parser {
             );
         }
 
-        // Validate structure
-        $validation = $this->validate_structure($data);
+        // Process block in a single optimized pass (validate + sanitize + fix)
+        $processed = $this->process_block($data, 0);
 
-        if (is_wp_error($validation)) {
-            return $validation;
+        if (is_wp_error($processed)) {
+            return $processed;
         }
 
-        // Sanitize and normalize
-        $sanitized = $this->sanitize_block($data);
+        return $processed;
+    }
 
-        // Fix common issues
-        $fixed = $this->fix_common_issues($sanitized);
+    /**
+     * Extend PHP execution time for complex operations
+     *
+     * @return void
+     */
+    private function extend_execution_time() {
+        // Only extend if we can and if current limit is less than 120 seconds
+        $current_limit = (int) ini_get('max_execution_time');
+        if ($current_limit > 0 && $current_limit < 120) {
+            // Use set_time_limit to extend (resets the counter)
+            if (function_exists('set_time_limit') && !ini_get('safe_mode')) {
+                @set_time_limit(120);
+            }
+        }
+    }
 
-        return $fixed;
+    /**
+     * Process block in a single pass: validate, sanitize, and fix issues
+     * This combines three separate recursive operations into one for efficiency
+     *
+     * @param array $block Block data.
+     * @param int   $depth Current nesting depth.
+     * @return array|\WP_Error Processed block or error.
+     */
+    private function process_block($block, $depth = 0) {
+        // Check depth limit to prevent infinite recursion
+        if ($depth > self::MAX_DEPTH) {
+            return new \WP_Error(
+                'max_depth_exceeded',
+                sprintf(
+                    __('Block nesting exceeds maximum depth of %d levels', 'gen-blocks'),
+                    self::MAX_DEPTH
+                )
+            );
+        }
+
+        // Validate: Check if it's an array
+        if (!is_array($block)) {
+            return new \WP_Error(
+                'invalid_structure',
+                __('Block data must be an object', 'gen-blocks')
+            );
+        }
+
+        // Validate: Check for required blockName
+        if (!isset($block['blockName'])) {
+            return new \WP_Error(
+                'missing_block_name',
+                __('Block is missing required blockName field', 'gen-blocks')
+            );
+        }
+
+        // Validate: Check blockName format
+        if (!$this->is_valid_block_name($block['blockName'])) {
+            return new \WP_Error(
+                'invalid_block_name',
+                sprintf(
+                    __('Invalid block name: %s', 'gen-blocks'),
+                    $block['blockName']
+                )
+            );
+        }
+
+        // Sanitize: Block name
+        $block['blockName'] = sanitize_text_field($block['blockName']);
+
+        // Sanitize: Ensure attrs exists and is array
+        if (!isset($block['attrs']) || !is_array($block['attrs'])) {
+            $block['attrs'] = [];
+        }
+
+        // Sanitize: Attributes
+        $block['attrs'] = $this->sanitize_attributes($block['attrs'], $block['blockName']);
+
+        // Fix: Heading level validation
+        if ($block['blockName'] === 'core/heading' && isset($block['attrs']['level'])) {
+            $level = intval($block['attrs']['level']);
+            $block['attrs']['level'] = max(1, min(6, $level));
+        }
+
+        // Sanitize: Ensure innerBlocks exists and is array
+        if (!isset($block['innerBlocks']) || !is_array($block['innerBlocks'])) {
+            $block['innerBlocks'] = [];
+        }
+
+        // Fix: Ensure innerBlocks for container blocks
+        $container_blocks = ['core/group', 'core/columns', 'core/buttons', 'core/cover'];
+        if (in_array($block['blockName'], $container_blocks, true) && !isset($block['innerBlocks'])) {
+            $block['innerBlocks'] = [];
+        }
+
+        // Process inner blocks recursively (single pass)
+        $processed_inner_blocks = [];
+        foreach ($block['innerBlocks'] as $index => $inner_block) {
+            $processed_inner = $this->process_block($inner_block, $depth + 1);
+            if (is_wp_error($processed_inner)) {
+                return new \WP_Error(
+                    'invalid_inner_block',
+                    sprintf(
+                        __('Invalid inner block at index %d: %s', 'gen-blocks'),
+                        $index,
+                        $processed_inner->get_error_message()
+                    )
+                );
+            }
+            $processed_inner_blocks[] = $processed_inner;
+        }
+        $block['innerBlocks'] = $processed_inner_blocks;
+
+        // Fix: Button without buttons wrapper (only at root level to avoid re-wrapping)
+        if ($depth === 0 && $block['blockName'] === 'core/button') {
+            $block = [
+                'blockName'   => 'core/buttons',
+                'attrs'       => [
+                    'layout' => [
+                        'type'           => 'flex',
+                        'justifyContent' => 'center',
+                    ],
+                ],
+                'innerBlocks' => [$block],
+            ];
+        }
+
+        // Fix: Column without columns wrapper (only at root level to avoid re-wrapping)
+        if ($depth === 0 && $block['blockName'] === 'core/column') {
+            $block = [
+                'blockName'   => 'core/columns',
+                'attrs'       => [],
+                'innerBlocks' => [$block],
+            ];
+        }
+
+        return $block;
     }
 
     /**
@@ -246,60 +385,6 @@ class Response_Parser {
     }
 
     /**
-     * Validate block structure
-     *
-     * @param array $data Parsed block data.
-     * @return true|\WP_Error
-     */
-    private function validate_structure($data) {
-        // Check if it's an array
-        if (!is_array($data)) {
-            return new \WP_Error(
-                'invalid_structure',
-                __('Block data must be an object', 'gen-blocks')
-            );
-        }
-
-        // Check for required blockName
-        if (!isset($data['blockName'])) {
-            return new \WP_Error(
-                'missing_block_name',
-                __('Block is missing required blockName field', 'gen-blocks')
-            );
-        }
-
-        // Validate blockName format
-        if (!$this->is_valid_block_name($data['blockName'])) {
-            return new \WP_Error(
-                'invalid_block_name',
-                sprintf(
-                    __('Invalid block name: %s', 'gen-blocks'),
-                    $data['blockName']
-                )
-            );
-        }
-
-        // Validate innerBlocks recursively
-        if (isset($data['innerBlocks']) && is_array($data['innerBlocks'])) {
-            foreach ($data['innerBlocks'] as $index => $inner_block) {
-                $inner_validation = $this->validate_structure($inner_block);
-                if (is_wp_error($inner_validation)) {
-                    return new \WP_Error(
-                        'invalid_inner_block',
-                        sprintf(
-                            __('Invalid inner block at index %d: %s', 'gen-blocks'),
-                            $index,
-                            $inner_validation->get_error_message()
-                        )
-                    );
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /**
      * Check if block name is valid
      *
      * @param string $name Block name.
@@ -325,37 +410,6 @@ class Response_Parser {
         }
 
         return in_array($name, $all_valid, true);
-    }
-
-    /**
-     * Sanitize block data
-     *
-     * @param array $block Block data.
-     * @return array Sanitized block data.
-     */
-    private function sanitize_block($block) {
-        // Sanitize block name
-        $block['blockName'] = sanitize_text_field($block['blockName']);
-
-        // Ensure attrs exists and is array
-        if (!isset($block['attrs']) || !is_array($block['attrs'])) {
-            $block['attrs'] = [];
-        }
-
-        // Sanitize attributes
-        $block['attrs'] = $this->sanitize_attributes($block['attrs'], $block['blockName']);
-
-        // Ensure innerBlocks exists and is array
-        if (!isset($block['innerBlocks']) || !is_array($block['innerBlocks'])) {
-            $block['innerBlocks'] = [];
-        }
-
-        // Recursively sanitize inner blocks
-        foreach ($block['innerBlocks'] as $key => $inner_block) {
-            $block['innerBlocks'][$key] = $this->sanitize_block($inner_block);
-        }
-
-        return $block;
     }
 
     /**
@@ -436,60 +490,6 @@ class Response_Parser {
 
         // Default: sanitize as text field
         return sanitize_text_field($value);
-    }
-
-    /**
-     * Fix common AI response issues
-     *
-     * @param array $block Block data.
-     * @return array Fixed block data.
-     */
-    private function fix_common_issues($block) {
-        $block_name = $block['blockName'];
-
-        // Fix: Button without buttons wrapper
-        if ($block_name === 'core/button') {
-            $block = [
-                'blockName'   => 'core/buttons',
-                'attrs'       => [
-                    'layout' => [
-                        'type'           => 'flex',
-                        'justifyContent' => 'center',
-                    ],
-                ],
-                'innerBlocks' => [$block],
-            ];
-        }
-
-        // Fix: Column without columns wrapper
-        if ($block_name === 'core/column') {
-            $block = [
-                'blockName'   => 'core/columns',
-                'attrs'       => [],
-                'innerBlocks' => [$block],
-            ];
-        }
-
-        // Fix: Heading level validation
-        if ($block_name === 'core/heading' && isset($block['attrs']['level'])) {
-            $level = intval($block['attrs']['level']);
-            $block['attrs']['level'] = max(1, min(6, $level));
-        }
-
-        // Fix: Ensure innerBlocks for container blocks
-        $container_blocks = ['core/group', 'core/columns', 'core/buttons', 'core/cover'];
-        if (in_array($block_name, $container_blocks, true) && !isset($block['innerBlocks'])) {
-            $block['innerBlocks'] = [];
-        }
-
-        // Recursively fix inner blocks
-        if (!empty($block['innerBlocks'])) {
-            foreach ($block['innerBlocks'] as $key => $inner_block) {
-                $block['innerBlocks'][$key] = $this->fix_common_issues($inner_block);
-            }
-        }
-
-        return $block;
     }
 
     /**
