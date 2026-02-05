@@ -1,0 +1,85 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "genblocks/testimonial",
+    "version": "1.0.0",
+    "title": "Testimonial Block",
+    "category": "genblocks",
+    "icon": "format-quote",
+    "description": "Display a testimonial with quote, author, and optional avatar.",
+    "keywords": ["testimonial", "quote", "review", "genblocks", "feedback"],
+    "textdomain": "gen-blocks",
+    "attributes": {
+        "quote": {
+            "type": "string",
+            "default": "This product has completely transformed our workflow. The team is incredibly responsive and the features are exactly what we needed."
+        },
+        "authorName": {
+            "type": "string",
+            "default": "Jane Smith"
+        },
+        "authorRole": {
+            "type": "string",
+            "default": "CEO, Company Name"
+        },
+        "authorImage": {
+            "type": "string",
+            "default": ""
+        },
+        "authorImageId": {
+            "type": "number",
+            "default": 0
+        },
+        "backgroundColor": {
+            "type": "string",
+            "default": "#f8f9fa"
+        },
+        "quoteColor": {
+            "type": "string",
+            "default": "#1e1e1e"
+        },
+        "authorNameColor": {
+            "type": "string",
+            "default": "#1e1e1e"
+        },
+        "authorRoleColor": {
+            "type": "string",
+            "default": "#666666"
+        },
+        "quoteIconColor": {
+            "type": "string",
+            "default": "#0073aa"
+        },
+        "borderRadius": {
+            "type": "number",
+            "default": 8
+        },
+        "showQuoteIcon": {
+            "type": "boolean",
+            "default": true
+        },
+        "textAlign": {
+            "type": "string",
+            "default": "center"
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "anchor": true,
+        "spacing": {
+            "margin": true,
+            "padding": true
+        }
+    },
+    "example": {
+        "attributes": {
+            "quote": "This product has completely transformed our workflow. The team is incredibly responsive and the features are exactly what we needed.",
+            "authorName": "Jane Smith",
+            "authorRole": "CEO, Company Name"
+        }
+    },
+    "editorScript": "genblocks-editor",
+    "editorStyle": "genblocks-editor-style",
+    "style": "genblocks-blocks"
+}

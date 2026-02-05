@@ -14,6 +14,8 @@ import './simple-card';
 import './ai-generator';
 import './cta-block';
 import './hero-block';
+import './features-block';
+import './testimonial-block';
 
 /**
  * Import and register plugins

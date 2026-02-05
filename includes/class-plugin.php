@@ -127,6 +127,8 @@ class Plugin {
         require_once $includes_dir . 'blocks/class-block-simple-card.php';
         require_once $includes_dir . 'blocks/class-block-cta.php';
         require_once $includes_dir . 'blocks/class-block-hero.php';
+        require_once $includes_dir . 'blocks/class-block-features.php';
+        require_once $includes_dir . 'blocks/class-block-testimonial.php';
     }
 
     /**
@@ -156,6 +158,8 @@ class Plugin {
         $this->blocks['simple-card'] = new Blocks\Block_Simple_Card();
         $this->blocks['cta']         = new Blocks\Block_CTA();
         $this->blocks['hero']        = new Blocks\Block_Hero();
+        $this->blocks['features']    = new Blocks\Block_Features();
+        $this->blocks['testimonial'] = new Blocks\Block_Testimonial();
     }
 
     /**

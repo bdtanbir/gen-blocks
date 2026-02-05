@@ -1,0 +1,100 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "genblocks/features",
+    "version": "1.0.0",
+    "title": "Features Block",
+    "category": "genblocks",
+    "icon": "grid-view",
+    "description": "Display a grid of features with icons, titles, and descriptions.",
+    "keywords": ["features", "grid", "services", "genblocks", "icons"],
+    "textdomain": "gen-blocks",
+    "attributes": {
+        "columns": {
+            "type": "number",
+            "default": 3
+        },
+        "features": {
+            "type": "array",
+            "default": [
+                {
+                    "icon": "star-filled",
+                    "title": "Feature One",
+                    "description": "Description of your first amazing feature."
+                },
+                {
+                    "icon": "lightbulb",
+                    "title": "Feature Two",
+                    "description": "Description of your second amazing feature."
+                },
+                {
+                    "icon": "chart-line",
+                    "title": "Feature Three",
+                    "description": "Description of your third amazing feature."
+                }
+            ]
+        },
+        "iconColor": {
+            "type": "string",
+            "default": "#0073aa"
+        },
+        "iconBackgroundColor": {
+            "type": "string",
+            "default": "#f0f0f0"
+        },
+        "titleColor": {
+            "type": "string",
+            "default": "#1e1e1e"
+        },
+        "descriptionColor": {
+            "type": "string",
+            "default": "#666666"
+        },
+        "backgroundColor": {
+            "type": "string",
+            "default": "#ffffff"
+        },
+        "iconSize": {
+            "type": "number",
+            "default": 48
+        },
+        "gap": {
+            "type": "number",
+            "default": 30
+        }
+    },
+    "supports": {
+        "html": false,
+        "align": ["wide", "full"],
+        "anchor": true,
+        "spacing": {
+            "margin": true,
+            "padding": true
+        }
+    },
+    "example": {
+        "attributes": {
+            "columns": 3,
+            "features": [
+                {
+                    "icon": "star-filled",
+                    "title": "Feature One",
+                    "description": "Description of your first amazing feature."
+                },
+                {
+                    "icon": "lightbulb",
+                    "title": "Feature Two",
+                    "description": "Description of your second amazing feature."
+                },
+                {
+                    "icon": "chart-line",
+                    "title": "Feature Three",
+                    "description": "Description of your third amazing feature."
+                }
+            ]
+        }
+    },
+    "editorScript": "genblocks-editor",
+    "editorStyle": "genblocks-editor-style",
+    "style": "genblocks-blocks"
+}
