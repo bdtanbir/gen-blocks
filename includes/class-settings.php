@@ -119,7 +119,7 @@ class Settings {
         $sanitized = [];
 
         if (isset($settings['api_provider'])) {
-            $allowed_providers = ['openai', 'claude', 'gemini'];
+            $allowed_providers = ['openai', 'anthropic', 'gemini'];
             $sanitized['api_provider'] = in_array($settings['api_provider'], $allowed_providers, true)
                 ? $settings['api_provider']
                 : 'openai';
